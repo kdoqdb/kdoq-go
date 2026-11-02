@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/kdoqdb/kdoq-go/internal/wire"
+	"github.com/kdoqdb/kdoq-go/transport"
 )
 
 // ServerError is an ERROR frame sent by the server.
@@ -35,9 +36,10 @@ func (e *LostError) Unwrap() error { return e.Cause }
 // END or ERROR.
 type IncompleteError struct {
 	// Reset is true when the peer reset the stream; ResetCode is its code.
-	Reset     bool
-	ResetCode uint64
-	Cause     error
+	Reset       bool
+	ResetCode   uint64
+	ResetDomain transport.Domain
+	Cause       error
 }
 
 func (e *IncompleteError) Error() string {

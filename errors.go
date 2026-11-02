@@ -3,6 +3,7 @@ package kdoq
 import (
 	"errors"
 	"fmt"
+	"github.com/kdoqdb/kdoq-go/transport"
 )
 
 // ErrorCode is a native protocol error code. Zero marks an error that did not
@@ -184,18 +185,20 @@ func (e *ConnectionError) Unwrap() error { return e.Err }
 type IncompleteError struct {
 	Outcome   Outcome
 	RequestID uint64
-	// ResetCode is the application code of a reset stream; Reset tells whether
+	// ResetCode is the reset code within ResetDomain; Reset tells whether
 	// the peer reset it at all.
 	Reset     bool
 	ResetCode uint64
-	Err       error
+	// ResetDomain identifies the meaning of ResetCode.
+	ResetDomain transport.Domain
+	Err         error
 }
 
 // Error implements error.
 func (e *IncompleteError) Error() string {
 	text := "kdoq: incomplete response"
 	if e.Reset {
-		text += fmt.Sprintf(": stream reset with code %d", e.ResetCode)
+		text += fmt.Sprintf(": %s stream reset with code %d", e.ResetDomain, e.ResetCode)
 	}
 	if e.Outcome == OutcomeUnknown {
 		text += " [outcome unknown]"

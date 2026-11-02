@@ -37,7 +37,7 @@ type Server struct {
 
 	// DialHook runs before a connection is created; a non-nil error fails the
 	// dial. It may block.
-	DialHook func(cfg transport.DialConfig) error
+	DialHook func(address string) error
 	// Intercept sees every operation after the command and its input were read.
 	// Returning true means the hook answered; false selects the default handler.
 	Intercept func(*Call) bool
@@ -50,7 +50,7 @@ type Server struct {
 
 	mu    sync.Mutex
 	users map[string]string
-	dials []transport.DialConfig
+	dials []string
 	conns []*Conn
 	docs  map[string]RawDoc
 	seq   int
@@ -93,10 +93,10 @@ func (s *Server) password(user string) (string, bool) {
 }
 
 // Dials returns the configuration of every dial so far.
-func (s *Server) Dials() []transport.DialConfig {
+func (s *Server) Dials() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return append([]transport.DialConfig(nil), s.dials...)
+	return append([]string(nil), s.dials...)
 }
 
 // Conns returns every connection accepted so far.
@@ -107,13 +107,14 @@ func (s *Server) Conns() []*Conn {
 }
 
 // Dial implements transport.Dialer.
-func (s *Server) Dial(ctx context.Context, cfg transport.DialConfig) (transport.Session, error) {
+func (s *Server) Dial(ctx context.Context, address string) (transport.Session, error) {
+
 	s.mu.Lock()
-	s.dials = append(s.dials, cfg)
+	s.dials = append(s.dials, address)
 	hook := s.DialHook
 	s.mu.Unlock()
 	if hook != nil {
-		if err := hook(cfg); err != nil {
+		if err := hook(address); err != nil {
 			return nil, err
 		}
 	}
@@ -159,7 +160,7 @@ func (c *Conn) send(frame []byte) error {
 }
 
 // Close ends the connection with a close code.
-func (c *Conn) Close(code uint32) { _ = c.sess.Close(code) }
+func (c *Conn) Close(code uint32) { _ = c.sess.CloseCode(code) }
 
 // Done is closed when the connection has ended.
 func (c *Conn) Done() <-chan struct{} { return c.sess.Done() }

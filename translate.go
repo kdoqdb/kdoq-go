@@ -7,6 +7,7 @@ import (
 	"github.com/kdoqdb/kdoq-go/internal/document"
 	"github.com/kdoqdb/kdoq-go/internal/session"
 	"github.com/kdoqdb/kdoq-go/internal/wire"
+	"github.com/kdoqdb/kdoq-go/transport"
 	"github.com/kdoqdb/kdoq-go/value"
 )
 
@@ -81,12 +82,12 @@ func (c *Client) operationFailure(err error, conn *session.Conn, requestID uint6
 	case errors.As(err, &server):
 		return serverError(server, requestID)
 	case errors.As(err, &incomplete):
-		if incomplete.Reset && incomplete.ResetCode == session.CloseRevoked {
+		if incomplete.Reset && incomplete.ResetDomain == transport.DomainNative && incomplete.ResetCode == session.CloseRevoked {
 			return &Error{Code: CodeRevoked, Message: "the session was revoked", RequestID: requestID}
 		}
 		return &IncompleteError{
 			Outcome: outcomeOf(write), RequestID: requestID,
-			Reset: incomplete.Reset, ResetCode: incomplete.ResetCode, Err: incomplete.Cause,
+			Reset: incomplete.Reset, ResetCode: incomplete.ResetCode, ResetDomain: incomplete.ResetDomain, Err: incomplete.Cause,
 		}
 	case errors.As(err, &lost):
 		if conn != nil && conn.Revoked() {

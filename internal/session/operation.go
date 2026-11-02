@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 
 	"github.com/kdoqdb/kdoq-go/internal/document"
-	"github.com/kdoqdb/kdoq-go/internal/transport"
 	"github.com/kdoqdb/kdoq-go/internal/wire"
+	"github.com/kdoqdb/kdoq-go/transport"
 )
 
 // Spec describes one operation: its code, the payload fields of its COMMAND
@@ -47,7 +47,7 @@ func (c *Conn) Start(ctx context.Context, spec Spec) (*Op, error) {
 	if !c.Alive() {
 		return nil, &LostError{}
 	}
-	stream, err := c.sess.OpenStream(ctx)
+	stream, err := c.sess.OpenOperation(ctx)
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, ctxErr
@@ -110,7 +110,7 @@ func (o *Op) Next() (Event, error) {
 			return Event{}, ErrCancelled
 		}
 		if err != nil {
-			o.finish()
+			o.abort()
 			return Event{}, o.lost(err)
 		}
 		switch frame.Kind {
@@ -134,7 +134,9 @@ func (o *Op) Next() (Event, error) {
 				return Event{}, err
 			}
 			if frame.Kind == wire.KindEnd {
-				o.finish()
+				if err := o.finish(); err != nil {
+					return Event{}, err
+				}
 			}
 			return Event{Kind: frame.Kind, Fields: fields}, nil
 		}
@@ -150,7 +152,7 @@ func (o *Op) lost(err error) error {
 	case !o.conn.Alive():
 		return &LostError{Cause: err}
 	case errors.As(err, &reset):
-		return &IncompleteError{Reset: true, ResetCode: reset.Code, Cause: err}
+		return &IncompleteError{Reset: true, ResetCode: reset.Code, ResetDomain: reset.Domain, Cause: err}
 	case errors.Is(err, wire.ErrIncomplete), errors.Is(err, io.EOF):
 		return &IncompleteError{Cause: err}
 	case errors.Is(err, wire.ErrMalformed):
@@ -159,13 +161,25 @@ func (o *Op) lost(err error) error {
 	return &LostError{Cause: err}
 }
 
-func (o *Op) finish() { o.finished = true }
+func (o *Op) finish() error {
+	o.finished = true
+	err := o.stream.Close()
+	if o.cancelled.Load() {
+		return ErrCancelled
+	}
+	if errors.Is(err, transport.ErrTrailingData) {
+		return errMalformed("bytes after terminal response")
+	}
+	if err != nil {
+		return o.lost(err)
+	}
+	return nil
+}
 
 // abort stops both directions after an error frame or a protocol violation.
 func (o *Op) abort() {
 	o.finished = true
-	o.stream.CancelWrite(0)
-	o.stream.CancelRead(0)
+	_ = o.stream.Abort()
 }
 
 // Cancel stops the operation: CANCEL on the control stream and a closed read
@@ -174,9 +188,8 @@ func (o *Op) Cancel() {
 	if !o.cancelled.CompareAndSwap(false, true) {
 		return
 	}
+	_ = o.stream.Abort()
 	o.conn.Cancel(o.requestID)
-	o.stream.CancelRead(14)
-	o.stream.CancelWrite(14)
 }
 
 // Close releases the stream of an operation that was not read to its end.

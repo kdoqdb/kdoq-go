@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/kdoqdb/kdoq-go"
+	"github.com/kdoqdb/kdoq-go/transport"
 	"github.com/kdoqdb/kdoq-go/value"
 )
 
@@ -41,12 +42,21 @@ import (
 const eventually = 30 * time.Second
 
 var serverBinary string
+var binding string
 
 func TestMain(m *testing.M) {
 	os.Exit(run(m))
 }
 
 func run(m *testing.M) int {
+	binding = os.Getenv("KDOQ_TRANSPORT")
+	if binding == "" {
+		binding = "quic"
+	}
+	if binding != "quic" && binding != "h2" && binding != "webtransport" {
+		fmt.Fprintln(os.Stderr, "invalid KDOQ_TRANSPORT:", binding)
+		return 1
+	}
 	bin, err := locateServer()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "e2e: no server binary:", err)
@@ -173,19 +183,14 @@ func (s *server) write(name string, data []byte) {
 
 // configuration renders the YAML file; JSON is valid YAML.
 func (s *server) configuration(port int) []byte {
-	quic := fmt.Sprintf("127.0.0.1:%d", port)
+	addresses := map[string]string{"h2": "127.0.0.1:0", "quic": "127.0.0.1:0", "webtransport": "127.0.0.1:0"}
+	addresses[binding] = fmt.Sprintf("127.0.0.1:%d", port)
 	cfg := map[string]any{
 		"data":    map[string]any{"path": "db"},
 		"logging": map[string]any{"format": "json"},
-		"native":  map[string]any{"enabled": true},
-		"http": map[string]any{
-			"listen": map[string]any{"http": "127.0.0.1:0", "quic": quic},
-			"tls": map[string]any{
-				"certificate":       "cert.pem",
-				"private_key":       "key.pem",
-				"allow_self_signed": true,
-			},
-		},
+		"tls":     map[string]any{"certificate": "cert.pem", "private_key": "key.pem", "allow_self_signed": true},
+		"native":  map[string]any{"enabled": true, "listen": map[string]any{"h2": addresses["h2"], "quic": addresses["quic"]}},
+		"http":    map[string]any{"listen": map[string]any{"http": "127.0.0.1:0", "quic": addresses["webtransport"]}},
 	}
 	if len(s.settings.Users) > 0 {
 		var users []map[string]any
@@ -242,11 +247,19 @@ func (s *server) start(port int) {
 			var event struct {
 				Event   string `json:"event"`
 				Address string `json:"native_address"`
+				H2      string `json:"h2_address"`
+				QUIC    string `json:"quic_address"`
 			}
 			if json.Unmarshal(line, &event) != nil || event.Event != "server_ready" {
 				continue
 			}
 			address := event.Address
+			if binding == "h2" {
+				address = event.H2
+			}
+			if binding == "quic" {
+				address = event.QUIC
+			}
 			if m := nativeAddress.FindStringSubmatch(address); m != nil {
 				p, _ := strconv.Atoi(m[1])
 				select {
@@ -320,14 +333,34 @@ func (s *server) connect(t *testing.T, name, password string, opts ...kdoq.Conne
 func (s *server) dial(ctx context.Context, name, password string, opts ...kdoq.ConnectOption) (*kdoq.Client, error) {
 	ctx, cancel := context.WithTimeout(ctx, eventually)
 	defer cancel()
+	tr, err := s.transport()
+	if err != nil {
+		return nil, err
+	}
 	all := append([]kdoq.ConnectOption{kdoq.ConnectOptions{
-		Host:            "127.0.0.1",
-		Port:            s.port,
-		Username:        name,
-		Password:        password,
-		CertificateHash: s.hash,
+		Host:      "127.0.0.1",
+		Port:      s.port,
+		Username:  name,
+		Password:  password,
+		Transport: tr,
 	}}, opts...)
 	return kdoq.Connect(ctx, "kdoq://127.0.0.1", all...)
+}
+
+// transport returns the same reusable public transport used by client scenarios.
+func (s *server) transport() (transport.Transport, error) {
+	tls := transport.TLSConfig{CertificateHash: s.hash}
+	var tr transport.Transport
+	var err error
+	switch binding {
+	case "h2":
+		tr, err = transport.NewH2(transport.H2Config{TLS: tls})
+	case "quic":
+		tr, err = transport.NewQUIC(transport.QUICConfig{TLS: tls})
+	case "webtransport":
+		tr, err = transport.NewWebTransport(transport.WebTransportConfig{TLS: tls})
+	}
+	return tr, err
 }
 
 // collection creates the database and collection and returns a generic

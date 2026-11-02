@@ -2,15 +2,12 @@ package kdoq_test
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
+
 	"errors"
 	"testing"
 
 	"github.com/kdoqdb/kdoq-go"
 	"github.com/kdoqdb/kdoq-go/internal/fakeserver"
-	"github.com/kdoqdb/kdoq-go/internal/transport"
 )
 
 func TestConnectParsesTheDSN(t *testing.T) {
@@ -20,19 +17,19 @@ func TestConnectParsesTheDSN(t *testing.T) {
 		url       string
 		database  string
 	}{
-		{"full", "kdoq://host.example:1234/shop", nil, "https://host.example:1234/native", "shop"},
-		{"default port", "kdoq://host.example", nil, "https://host.example:27505/native", ""},
-		{"options override", "kdoq://dsn-host:1/dsn-db", []kdoq.ConnectOption{kdoq.ConnectOptions{Host: "opt-host", Port: 2, Database: "opt-db"}}, "https://opt-host:2/native", "opt-db"},
-		{"options only", "", []kdoq.ConnectOption{kdoq.ConnectOptions{Host: "h"}}, "https://h:27505/native", ""},
-		{"ipv6", "kdoq://[::1]:9", nil, "https://[::1]:9/native", ""},
-		{"later option wins", "kdoq://h", []kdoq.ConnectOption{kdoq.ConnectOptions{Port: 5}, kdoq.ConnectOptions{Port: 6}}, "https://h:6/native", ""},
+		{"full", "kdoq://host.example:1234/shop", nil, "host.example:1234", "shop"},
+		{"default port", "kdoq://host.example", nil, "host.example:27505", ""},
+		{"options override", "kdoq://dsn-host:1/dsn-db", []kdoq.ConnectOption{kdoq.ConnectOptions{Host: "opt-host", Port: 2, Database: "opt-db"}}, "opt-host:2", "opt-db"},
+		{"options only", "", []kdoq.ConnectOption{kdoq.ConnectOptions{Host: "h"}}, "h:27505", ""},
+		{"ipv6", "kdoq://[::1]:9", nil, "[::1]:9", ""},
+		{"later option wins", "kdoq://h", []kdoq.ConnectOption{kdoq.ConnectOptions{Port: 5}, kdoq.ConnectOptions{Port: 6}}, "h:6", ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			server := newServer(fakeserver.Config{})
 			h := connect(t, server, c.dsn, c.opts...)
 			dials := server.Dials()
-			if len(dials) != 1 || dials[0].URL != c.url {
+			if len(dials) != 1 || dials[0] != c.url {
 				t.Fatalf("dialed %v, want %s", dials, c.url)
 			}
 			if c.database != "" {
@@ -70,7 +67,6 @@ func TestConnectRejectsMistakesBeforeAnyNetwork(t *testing.T) {
 		{"port zero is not a port", "kdoq://h:0", nil},
 		{"port too large", "kdoq://h:70000", nil},
 		{"query string", "kdoq://h?x=1", nil},
-		{"bad certificate hash", "kdoq://h", []kdoq.ConnectOption{kdoq.ConnectOptions{CertificateHash: []byte{1, 2}}}},
 		{"negative attempts", "kdoq://h", []kdoq.ConnectOption{kdoq.ConnectOptions{Retry: &kdoq.RetryPolicy{Attempts: -1}}}},
 	}
 	for _, c := range cases {
@@ -156,7 +152,7 @@ func TestAuthenticationFailures(t *testing.T) {
 
 func TestDialFailureIsAConnectionError(t *testing.T) {
 	server := newServer(fakeserver.Config{})
-	server.DialHook = func(transport.DialConfig) error { return errors.New("refused") }
+	server.DialHook = func(string) error { return errors.New("refused") }
 	_, err := kdoq.Connect(context.Background(), "kdoq://h", kdoq.WithTransport(server))
 	var conn *kdoq.ConnectionError
 	if !errors.As(err, &conn) {
@@ -170,53 +166,5 @@ func TestConnectHonorsAnExpiredContext(t *testing.T) {
 	_, err := kdoq.Connect(ctx, "kdoq://h", kdoq.WithTransport(newServer(fakeserver.Config{})))
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Connect error = %v, want context.Canceled", err)
-	}
-}
-
-func TestClientSendsNoOrigin(t *testing.T) {
-	server := newServer(fakeserver.Config{})
-	connect(t, server, "kdoq://h")
-	if origin := server.Dials()[0].Header.Get("Origin"); origin != "" {
-		t.Fatalf("Origin = %q, the client must send none", origin)
-	}
-}
-
-func selfSigned(t *testing.T) *x509.Certificate {
-	t.Helper()
-	return newCertificate(t, "pinned.example")
-}
-
-func TestCertificateHashPinsTheLeafCertificate(t *testing.T) {
-	cert := selfSigned(t)
-	sum := sha256.Sum256(cert.Raw)
-	server := newServer(fakeserver.Config{})
-	connect(t, server, "kdoq://h", kdoq.ConnectOptions{CertificateHash: sum[:]})
-	cfg := server.Dials()[0].TLS
-	if !cfg.InsecureSkipVerify || cfg.VerifyConnection == nil {
-		t.Fatalf("a pinned config must replace chain verification: %+v", cfg)
-	}
-	if err := cfg.VerifyConnection(tls.ConnectionState{PeerCertificates: []*x509.Certificate{cert}}); err != nil {
-		t.Fatalf("the pinned certificate was rejected: %v", err)
-	}
-	other := newCertificate(t, "other.example")
-	if err := cfg.VerifyConnection(tls.ConnectionState{PeerCertificates: []*x509.Certificate{other}}); err == nil {
-		t.Fatal("a different certificate was accepted")
-	}
-	if err := cfg.VerifyConnection(tls.ConnectionState{}); err == nil {
-		t.Fatal("a missing certificate was accepted")
-	}
-}
-
-func TestTLSConfigIsHonoredWithoutAHash(t *testing.T) {
-	pool := x509.NewCertPool()
-	mine := &tls.Config{ServerName: "kdoq.internal", RootCAs: pool}
-	server := newServer(fakeserver.Config{})
-	connect(t, server, "kdoq://h", kdoq.ConnectOptions{TLSConfig: mine})
-	got := server.Dials()[0].TLS
-	if got.ServerName != "kdoq.internal" || got.RootCAs != pool || got.InsecureSkipVerify || got.VerifyConnection != nil {
-		t.Fatalf("the TLS config was not honored as given: %+v", got)
-	}
-	if got == mine {
-		t.Fatal("the caller's config must be cloned, not shared")
 	}
 }

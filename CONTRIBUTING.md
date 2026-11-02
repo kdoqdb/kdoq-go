@@ -12,7 +12,7 @@ go vet ./...
 go test ./...
 ```
 
-`gofmt -l` must print nothing. `go test ./...` needs no server and no network. No linters beyond
+`gofmt -l` must print nothing. `go test ./...` needs no external server or network service (transport tests bind loopback ports). No linters beyond
 `go vet` are used.
 
 The CI workflow ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the same three checks,
@@ -23,17 +23,19 @@ The end-to-end suite needs a built `kdoq` server and is run separately; see
 
 ## Public surface
 
-The library exposes only what a user needs. Two packages are public:
+The library exposes only what a user needs. Three packages are public:
 
 - `github.com/kdoqdb/kdoq-go` (the module root, imported as `kdoq`): the client, databases,
   collections, queries, cursors, mutations, administration and errors;
 - `github.com/kdoqdb/kdoq-go/value`: value types, struct conversion and `Format`. It has no
-  network code and does not import `kdoq`.
+  network code and does not import `kdoq`;
+- `github.com/kdoqdb/kdoq-go/transport`: public transport/connection/stream contracts,
+  typed configuration and constructors for H2, direct QUIC and WebTransport.
 
 Everything else lives under `internal/` or in test files. **A new exported identifier is a
 deliberate, reviewed decision**, not a side effect of an implementation:
 
-- `testdata/api.txt` lists every exported identifier of both public packages with its signature.
+- `testdata/api.txt` lists every exported identifier of all public packages with its signature.
   `TestPublicSurface` fails on any difference, and `TestNoUndeclaredPublicPackage` fails when a
   package outside `internal/` is not declared public.
 - To change the surface, change the code, then run
@@ -43,9 +45,10 @@ deliberate, reviewed decision**, not a side effect of an implementation:
 - Options are variadic values of a sealed interface that only this module can implement. The
   options structs implement it, so adding a functional `WithX` option later does not change a
   signature.
-- A value that crosses the public boundary is a plain type of `kdoq` or `kdoq/value`. Frames,
-  SCRAM, sessions, transport, the binary document encoding and retries stay internal and know no
-  public type.
+- Public API values belong to `kdoq`, `kdoq/value` or `kdoq/transport`. Frames,
+  SCRAM, native sessions, the binary document encoding and retries stay internal.
+  Native sessions depend on the public transport contract, without importing the
+  root client package.
 
 ## Layout
 
@@ -59,7 +62,8 @@ internal/wire/                             frames and the field grammar
 internal/scram/                            SCRAM-SHA-256
 internal/document/                         KQ BSON v4 documents, name dictionaries, the Stream reader
 internal/source/                           the seam between internal/document and value
-internal/transport/                        the transport seam: WebTransport dialer, in-memory pair
+transport/                                 public transport contracts and private network implementations
+internal/transport/                        in-memory native connection model for tests
 internal/session/                          setup, control stream, operation streams
 internal/retry/                            backoff
 internal/fakeserver/                       the in-process native server used by tests
@@ -67,15 +71,15 @@ testdata/api.txt                           the surface listing
 e2e/                                       end-to-end suite against a real kdoq (build tag e2e)
 ```
 
-The module is self-contained. Its dependencies are `quic-go` and `webtransport-go`; everything
-else is the standard library.
+The module uses `quic-go` and `webtransport-go` for QUIC bindings and
+`golang.org/x/net/http2` for H2. The remaining implementation uses the standard library.
 
 `webtransport-go` is pinned to v0.9.0 with `quic-go` v0.53.0 and `qpack` v0.5.1. Later releases
 refuse a server that does not offer QUIC stream reset partial delivery, and the server's
 WebTransport stack does not offer it yet, so the end-to-end suite could not connect. Move the pin
 only together with a server that negotiates the extension. With the pinned version the close the
 server sends on revocation arrives as a QUIC application error rather than a WebTransport session
-close; `internal/transport` maps both to `SessionError`.
+close; `transport` maps both to `SessionError`.
 
 The wire contract is the protocol reference of the
 [kdoq server](https://github.com/kdoqdb/kdoq). If the library finds a gap in it, fix the contract
@@ -109,7 +113,7 @@ change:
 
 - Tests exercise behavior through the public surface: what a caller sees after a call, an error,
   a cancellation or a reconnect. Public and end-to-end tests are in `package kdoq_test`.
-  Transport substitution is reachable only from `export_test.go`.
+  Transport substitution uses the public `ConnectOptions.Transport` seam.
 - The main seam is the public client against the in-process fake server. The value package has
   its own black-box tests, and `internal/wire/reference_test.go` holds the reference bytes copied
   from the server's protocol tests.
@@ -138,7 +142,7 @@ times on a quiet one, with several runs (`-count`).
 ### End-to-end suite
 
 `e2e/` starts a real `kdoq` for each test with a generated self-signed certificate and its own
-configuration in a temporary directory, passes the port and the certificate hash to the client
+configuration in a temporary directory, passes the selected listener port and the certificate hash to the client
 explicitly, and stops the process when the test ends. It prints the server's log when a test
 fails and leaves no process or file behind.
 
@@ -146,8 +150,14 @@ It needs a server binary. Build `kdoq` from the [kdoq repository](https://github
 and point `KDOQ_BIN` at it:
 
 ```sh
-KDOQ_BIN=/path/to/kdoq go test -tags e2e ./e2e/...
+KDOQ_BIN=../kdoq/target/debug/kdoq KDOQ_TRANSPORT=quic go test -tags e2e ./e2e/...
+KDOQ_BIN=../kdoq/target/debug/kdoq KDOQ_TRANSPORT=h2 go test -tags e2e ./e2e/...
+KDOQ_BIN=../kdoq/target/debug/kdoq KDOQ_TRANSPORT=webtransport go test -tags e2e ./e2e/...
 ```
+
+`KDOQ_TRANSPORT` defaults to `quic`; all three commands are required after a
+transport change. The harness uses root `tls`, enables all three listeners, and
+reads the selected listener from `server_ready`. Restart preserves that endpoint.
 
 When `KDOQ_BIN` is not set, the harness tries `cargo build -p kdoq --bin kdoq` in the current
 module's tree, which works only if this library sits inside a checkout of the kdoq repository.

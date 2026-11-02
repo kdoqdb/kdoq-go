@@ -12,10 +12,10 @@
 // returns after the server accepted the session. A user name selects
 // SCRAM-SHA-256 and the client verifies the server's final signature; without
 // a user the session is anonymous. [ConnectOptions] overrides any field of the
-// DSN, so credentials can stay out of the string. A server with a self-signed
-// certificate is trusted by pinning the SHA-256 hash of its certificate in
-// [ConnectOptions].CertificateHash; otherwise the system roots or
-// [ConnectOptions].TLSConfig verify it.
+// DSN, so credentials can stay out of the string. Direct QUIC is the default;
+// [ConnectOptions].Transport selects H2 or WebTransport without fallback.
+// Transports and their TLS settings live in the kdoq/transport package. A
+// certificate hash replaces chain trust but still checks hostname and dates.
 //
 // When neither the DSN nor [ConnectOptions] names a port, the client uses
 // [DefaultPort] (27505).

@@ -1,3 +1,24 @@
+kdoq/transport: const DomainH2 Domain
+kdoq/transport: const DomainNative Domain
+kdoq/transport: const DomainQUIC Domain
+kdoq/transport: func (e *SessionError) Error() string
+kdoq/transport: func (e *SessionError) Unwrap() error
+kdoq/transport: func (e *StreamError) Error() string
+kdoq/transport: func (e *StreamError) Unwrap() error
+kdoq/transport: func NewH2(config H2Config) (Transport, error)
+kdoq/transport: func NewQUIC(config QUICConfig) (Transport, error)
+kdoq/transport: func NewWebTransport(config WebTransportConfig) (Transport, error)
+kdoq/transport: type Connection interface{ OpenControl(ctx context.Context) (Stream, error); OpenOperation(ctx context.Context) (Stream, error); Close() error; Done() <-chan struct{}; Err() error }
+kdoq/transport: type Domain string
+kdoq/transport: type H2Config struct{ TLS TLSConfig }
+kdoq/transport: type QUICConfig struct{ TLS TLSConfig; Config *quic.Config }
+kdoq/transport: type SessionError struct{ Domain Domain; Code uint64; Message string; Err error }
+kdoq/transport: type Stream interface{ io.Reader; io.Writer; CloseWrite() error; Abort() error; Close() error }
+kdoq/transport: type StreamError struct{ Domain Domain; Code uint64; Err error }
+kdoq/transport: type TLSConfig struct{ Config *tls.Config; CertificateHash []byte }
+kdoq/transport: type Transport interface{ Dial(ctx context.Context, address string) (Connection, error) }
+kdoq/transport: type WebTransportConfig struct{ TLS TLSConfig; Config *quic.Config }
+kdoq/transport: var ErrTrailingData
 kdoq/value: func (c CalendarDate) String() string
 kdoq/value: func (c CalendarDate) ToTime(loc *time.Location) time.Time
 kdoq/value: func (d Decimal128) Bytes() []byte
@@ -189,7 +210,7 @@ kdoq: type Collection[T any] struct{ ... }
 kdoq: type Collections struct{ ... }
 kdoq: type ConfigError struct{ Message string }
 kdoq: type ConnectOption interface{ (sealed) }
-kdoq: type ConnectOptions struct{ Host, Username, Password, Database string; Port int; TLSConfig *tls.Config; CertificateHash []byte; Capabilities Capabilities; ConnectTimeout time.Duration; OperationTimeout time.Duration; Retry *RetryPolicy; NoReconnect bool; OnState func(State, error); ... }
+kdoq: type ConnectOptions struct{ Host, Username, Password, Database string; Port int; Transport transport.Transport; Capabilities Capabilities; ConnectTimeout time.Duration; OperationTimeout time.Duration; Retry *RetryPolicy; NoReconnect bool; OnState func(State, error); ... }
 kdoq: type ConnectionError struct{ Message string; Outcome Outcome; RequestID uint64; Err error }
 kdoq: type CursorID uint64
 kdoq: type Cursor[T any] struct{ ... }
@@ -204,7 +225,7 @@ kdoq: type ErrorCode uint16
 kdoq: type FindOption interface{ (sealed) }
 kdoq: type FindOptions struct{ PageSize int; IdleTTL time.Duration; Skip, Limit uint64; Budget Budget; Observe Observe; OnProgress func(Progress); OnDiagnostic func(Diagnostic) }
 kdoq: type GroupKey struct{ Value any }
-kdoq: type IncompleteError struct{ Outcome Outcome; RequestID uint64; Reset bool; ResetCode uint64; Err error }
+kdoq: type IncompleteError struct{ Outcome Outcome; RequestID uint64; Reset bool; ResetCode uint64; ResetDomain transport.Domain; Err error }
 kdoq: type Item[T any] struct{ Key Key; Group *GroupKey; Value T }
 kdoq: type Key string
 kdoq: type MutationMode uint8

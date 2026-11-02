@@ -1,5 +1,8 @@
 # kdoq-go
 
+> **Not ready for production.** This library is under active development. Its public API
+> is not stable and may change without backward compatibility.
+
 [![CI](https://github.com/kdoqdb/kdoq-go/actions/workflows/ci.yml/badge.svg)](https://github.com/kdoqdb/kdoq-go/actions/workflows/ci.yml)
 
 A Go client for [kdoq](https://github.com/kdoqdb/kdoq), a document database. It gives you typed
@@ -122,14 +125,56 @@ A mistake in the configuration, such as a password without a user, fails at once
 touches the network. With SCRAM the client also checks the server's final signature before it
 trusts the session.
 
-### TLS
+### Transports and TLS
 
-By default the server certificate is verified against the system roots. For anything else:
+The default transport is **direct QUIC**, using ALPN `kdoq-native`. Select H2 or
+WebTransport explicitly through `ConnectOptions.Transport`; there is no fallback.
+The DSN host and port must name the matching server listener:
 
-- **Self-signed certificate.** Pin the SHA-256 hash of the server's DER certificate with
-  `ConnectOptions.CertificateHash`. This is safer than turning verification off.
-- **Private certificate authority or another server name.** Pass your own `*tls.Config` as
-  `ConnectOptions.TLSConfig`.
+| Constructor | Server endpoint | Binding |
+| --- | --- | --- |
+| `transport.NewQUIC` | `native.listen.quic` | Native QUIC/TLS over UDP |
+| `transport.NewH2` | `native.listen.h2` | Native HTTP/2 over TLS/TCP |
+| `transport.NewWebTransport` | `http.listen.quic` | WebTransport over HTTP/3 |
+
+```go
+// Import "github.com/kdoqdb/kdoq-go/transport".
+tr, err := transport.NewH2(transport.H2Config{
+    TLS: transport.TLSConfig{
+        CertificateHash: certificateHash, // 32-byte SHA-256 of the DER leaf certificate
+    },
+})
+if err != nil {
+    return err
+}
+client, err := kdoq.Connect(ctx, dsn, kdoq.ConnectOptions{Transport: tr})
+```
+
+Constructors validate configuration without network I/O. A transport is safe to
+reuse across clients; each client owns a separate connection and authenticated
+session. H2 keeps control and every operation on that exact physical connection.
+HELLO, SCRAM, native messages and retry policy are shared across all bindings.
+
+All transports use TLS 1.3 and verify system roots by default. Set
+`TLSConfig.Config` to a `*tls.Config` with private `RootCAs` or an explicit
+`ServerName`. The configuration is cloned. With `TLSConfig.CertificateHash`, the
+exact leaf hash replaces chain trust, while hostname and validity-date checks
+remain mandatory. An explicit `ServerName` is used for hostname verification;
+otherwise it is the DSN host, including IP-address verification. Any configured
+`VerifyConnection` runs as an additional check. Hash bytes are copied by the
+constructor. `InsecureSkipVerify` without an explicit hash is rejected.
+
+`QUICConfig.Config` and `WebTransportConfig.Config` accept a cloned `*quic.Config`
+for network settings. Each transport enforces its ALPN and protocol requirements.
+Custom transports implement the public `transport.Transport`, `Connection` and
+`Stream` interfaces. Streams provide concurrent reads/writes, `CloseWrite`,
+`Abort` and `Close`; session framing and authentication remain the client's job.
+`StreamError` and `SessionError` identify the code domain and preserve the original
+cause. In particular, H2 reset code 8 is cancellation, never native revocation.
+
+Migration from the previous API: move `ConnectOptions.TLSConfig` and
+`CertificateHash` into the selected transport's `TLSConfig`; explicitly construct
+`NewWebTransport` to retain the previous binding. The default port remains 27505.
 
 ### Connection lifecycle
 
@@ -148,7 +193,14 @@ client, err := kdoq.Connect(ctx, dsn, kdoq.ConnectOptions{
 log.Println(client.Err())
 ```
 
-Set `ConnectOptions.NoReconnect` to keep a lost connection lost.
+Set `ConnectOptions.NoReconnect` to keep a lost connection lost. Reconnect always
+uses the selected transport and authenticates a fresh session. `Close(ctx)` is
+terminal: it cancels an outstanding reconnect, ends active operations and bounds
+LOGOUT/ACK by the supplied context. It does not wait for operations to finish
+successfully; uncertain writes remain uncertain. Operation cancellation aborts
+local I/O promptly. Native CANCEL uses bounded control dispatch; if its queue is
+exhausted by stalled control output, the session is closed rather than retaining
+unbounded cancellation callbacks.
 
 ## Documents
 

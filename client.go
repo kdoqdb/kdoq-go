@@ -2,19 +2,15 @@ package kdoq
 
 import (
 	"context"
-	"crypto/sha256"
-	"crypto/subtle"
-	"crypto/tls"
 	"errors"
 	"net"
-	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/kdoqdb/kdoq-go/internal/retry"
 	"github.com/kdoqdb/kdoq-go/internal/session"
-	"github.com/kdoqdb/kdoq-go/internal/transport"
+	"github.com/kdoqdb/kdoq-go/transport"
 )
 
 const (
@@ -27,12 +23,11 @@ const (
 type config struct {
 	host, username, password, database string
 	port                               int
-	tls                                *tls.Config
 	capabilities                       Capabilities
 	connectTimeout, operationTimeout   time.Duration
 	retry                              retry.Policy
 	noReconnect                        bool
-	dialer                             transport.Dialer
+	dialer                             transport.Transport
 	nonce                              string
 }
 
@@ -57,9 +52,10 @@ type Client struct {
 
 // attempt is one connection attempt shared by every operation waiting for it.
 type attempt struct {
-	done chan struct{}
-	conn *session.Conn
-	err  error
+	done   chan struct{}
+	conn   *session.Conn
+	err    error
+	cancel context.CancelFunc
 }
 
 // Connect connects to the server named by dsn (kdoq://[user[:pass]@]host[:port][/db])
@@ -117,18 +113,14 @@ func resolve(dsn string, opts []ConnectOption) (config, func(State, error), erro
 	if o.Port < 1 || o.Port > 65535 {
 		return config{}, nil, &ConfigError{Message: "invalid port " + strconv.Itoa(o.Port)}
 	}
-	if o.CertificateHash != nil && len(o.CertificateHash) != sha256.Size {
-		return config{}, nil, &ConfigError{Message: "the certificate hash must be a SHA-256 digest of 32 bytes"}
-	}
 	if o.Retry != nil && o.Retry.Attempts < 0 {
 		return config{}, nil, &ConfigError{Message: "retry attempts cannot be negative"}
 	}
 	cfg := config{
 		host: o.Host, username: o.Username, password: o.Password, database: o.Database, port: o.Port,
-		tls:          tlsConfig(o.TLSConfig, o.CertificateHash),
 		capabilities: o.Capabilities.orDefault(),
 		noReconnect:  o.NoReconnect,
-		dialer:       o.dialer,
+		dialer:       o.Transport,
 		nonce:        o.nonce,
 	}
 	cfg.connectTimeout = orDuration(o.ConnectTimeout, defaultConnectTimeout)
@@ -140,7 +132,7 @@ func resolve(dsn string, opts []ConnectOption) (config, func(State, error), erro
 		}
 	}
 	if cfg.dialer == nil {
-		cfg.dialer = transport.WebTransport{}
+		cfg.dialer, _ = transport.NewQUIC(transport.QUICConfig{})
 	}
 	return cfg, o.OnState, nil
 }
@@ -152,47 +144,13 @@ func orDuration(d, fallback time.Duration) time.Duration {
 	return fallback
 }
 
-// tlsConfig returns the configuration the transport verifies the server with.
-// A certificate hash pins the leaf certificate and replaces chain verification.
-func tlsConfig(base *tls.Config, hash []byte) *tls.Config {
-	var cfg *tls.Config
-	if base != nil {
-		cfg = base.Clone()
-	} else {
-		cfg = &tls.Config{}
-	}
-	if cfg.MinVersion < tls.VersionTLS13 {
-		cfg.MinVersion = tls.VersionTLS13
-	}
-	if hash == nil {
-		return cfg
-	}
-	pinned := append([]byte(nil), hash...)
-	cfg.InsecureSkipVerify = true
-	cfg.VerifyConnection = func(cs tls.ConnectionState) error {
-		if len(cs.PeerCertificates) == 0 {
-			return errors.New("the server sent no certificate")
-		}
-		sum := sha256.Sum256(cs.PeerCertificates[0].Raw)
-		if subtle.ConstantTimeCompare(sum[:], pinned) != 1 {
-			return errors.New("the server certificate does not match the pinned hash")
-		}
-		return nil
-	}
-	return cfg
-}
-
 // open dials the transport and runs the session setup.
 func (c *Client) open(ctx context.Context) (*session.Conn, error) {
 	cfg := c.cfg
-	dial := transport.DialConfig{
-		URL:    "https://" + net.JoinHostPort(cfg.host, strconv.Itoa(cfg.port)) + "/native",
-		TLS:    cfg.tls,
-		Header: http.Header{},
-	}
-	sess, err := cfg.dialer.Dial(ctx, dial)
+	address := net.JoinHostPort(cfg.host, strconv.Itoa(cfg.port))
+	sess, err := cfg.dialer.Dial(ctx, address)
 	if err != nil {
-		return nil, connectFailure("cannot connect to "+dial.URL, err)
+		return nil, connectFailure("cannot connect to "+address, err)
 	}
 	conn, err := session.Open(ctx, sess, session.Settings{
 		SCRAM: cfg.username != "", Username: cfg.username, Password: cfg.password,
@@ -252,6 +210,9 @@ func (c *Client) fail(err error) {
 		return
 	}
 	c.state = StateClosed
+	if c.connecting != nil {
+		c.connecting.cancel()
+	}
 	c.fatal = err
 	conn := c.conn
 	c.conn = nil
@@ -288,32 +249,39 @@ func (c *Client) ensure(ctx context.Context) (*session.Conn, error) {
 	}
 	a := c.connecting
 	if a == nil {
-		a = &attempt{done: make(chan struct{})}
+		openCtx, cancel := context.WithTimeout(context.Background(), c.cfg.connectTimeout)
+		a = &attempt{done: make(chan struct{}), cancel: cancel}
 		c.connecting = a
-		go c.reconnect(a)
+		go c.reconnect(openCtx, a)
 	}
 	c.mu.Unlock()
 	select {
 	case <-a.done:
 		return a.conn, a.err
+	case <-c.closed:
+		c.mu.Lock()
+		err := c.closedError()
+		c.mu.Unlock()
+		return nil, err
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
 }
 
-func (c *Client) reconnect(a *attempt) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.cfg.connectTimeout)
-	defer cancel()
+func (c *Client) reconnect(ctx context.Context, a *attempt) {
+	defer a.cancel()
 	conn, err := c.open(ctx)
 	if err != nil && errors.Is(err, context.DeadlineExceeded) {
 		err = &ConnectionError{Message: "connecting timed out", Err: err}
 	}
 	c.mu.Lock()
 	switch {
-	case err != nil:
 	case c.state == StateClosed:
-		conn.Close()
+		if conn != nil {
+			conn.Close()
+		}
 		conn, err = nil, c.closedError()
+	case err != nil:
 	default:
 		c.install(conn)
 	}
@@ -383,6 +351,9 @@ func (c *Client) Close(ctx context.Context) error {
 		return nil
 	}
 	c.closing = true
+	if c.connecting != nil {
+		c.connecting.cancel()
+	}
 	conn := c.conn
 	c.conn = nil
 	c.state = StateClosed

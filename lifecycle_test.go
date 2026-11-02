@@ -9,7 +9,6 @@ import (
 
 	"github.com/kdoqdb/kdoq-go"
 	"github.com/kdoqdb/kdoq-go/internal/fakeserver"
-	"github.com/kdoqdb/kdoq-go/internal/transport"
 	"github.com/kdoqdb/kdoq-go/value"
 )
 
@@ -55,7 +54,7 @@ func TestConcurrentOperationsShareOneReconnect(t *testing.T) {
 
 	release := make(chan struct{})
 	var dials atomic.Int32
-	server.DialHook = func(transport.DialConfig) error {
+	server.DialHook = func(string) error {
 		dials.Add(1)
 		<-release
 		return nil
@@ -88,7 +87,7 @@ func TestAFailedReconnectFailsOnlyTheOperationsWaitingForIt(t *testing.T) {
 
 	release := make(chan struct{})
 	var dials atomic.Int32
-	server.DialHook = func(transport.DialConfig) error {
+	server.DialHook = func(string) error {
 		if dials.Add(1) == 1 {
 			<-release
 			return errors.New("the network is down")

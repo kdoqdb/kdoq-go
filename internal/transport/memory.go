@@ -3,6 +3,7 @@ package transport
 import (
 	"context"
 	"errors"
+	public "github.com/kdoqdb/kdoq-go/transport"
 	"io"
 	"sync"
 )
@@ -73,8 +74,8 @@ func (m *Memory) Accept(ctx context.Context) (Stream, error) {
 }
 
 // Close implements Session. The peer sees a *SessionError with code.
-func (m *Memory) Close(code uint32) error {
-	m.core.end(m.side, nil, &SessionError{Code: code})
+func (m *Memory) CloseCode(code uint32) error {
+	m.core.end(m.side, nil, &SessionError{Domain: public.DomainNative, Code: uint64(code)})
 	return nil
 }
 
@@ -171,7 +172,7 @@ func (p *bytePipe) finish() {
 func (p *bytePipe) reset(code uint64) {
 	p.mu.Lock()
 	if p.readErr == nil {
-		p.readErr = &StreamError{Code: code}
+		p.readErr = &StreamError{Domain: public.DomainNative, Code: code}
 		p.buf = nil
 	}
 	p.cond.Broadcast()
@@ -181,7 +182,7 @@ func (p *bytePipe) reset(code uint64) {
 func (p *bytePipe) stop(code uint64) {
 	p.mu.Lock()
 	if p.stopped == nil {
-		p.stopped = &StreamError{Code: code}
+		p.stopped = &StreamError{Domain: public.DomainNative, Code: code}
 	}
 	if p.readErr == nil {
 		p.readErr = p.stopped
@@ -211,3 +212,9 @@ func (s *memoryStream) Write(b []byte) (int, error) { return s.out.write(b) }
 func (s *memoryStream) CloseWrite() error           { s.out.finish(); return nil }
 func (s *memoryStream) CancelRead(code uint64)      { s.in.stop(code) }
 func (s *memoryStream) CancelWrite(code uint64)     { s.out.reset(code) }
+
+func (m *Memory) OpenControl(ctx context.Context) (Stream, error)   { return m.OpenStream(ctx) }
+func (m *Memory) OpenOperation(ctx context.Context) (Stream, error) { return m.OpenStream(ctx) }
+func (m *Memory) Close() error                                      { return m.CloseCode(0) }
+func (s *memoryStream) Abort() error                                { s.CancelRead(14); s.CancelWrite(14); return nil }
+func (s *memoryStream) Close() error                                { s.CancelRead(0); s.CancelWrite(0); return nil }

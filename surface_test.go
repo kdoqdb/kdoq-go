@@ -21,8 +21,9 @@ var updateAPI = flag.Bool("update-api", false, "rewrite testdata/api.txt from th
 // publicPackages maps the directory of each public package to its import path
 // relative to the module. Everything else is internal or test-only.
 var publicPackages = map[string]string{
-	".":     "kdoq",
-	"value": "kdoq/value",
+	".":         "kdoq",
+	"value":     "kdoq/value",
+	"transport": "kdoq/transport",
 }
 
 // TestPublicSurface fails when an exported identifier of a public package is

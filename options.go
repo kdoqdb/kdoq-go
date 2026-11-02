@@ -1,10 +1,9 @@
 package kdoq
 
 import (
-	"crypto/tls"
 	"time"
 
-	"github.com/kdoqdb/kdoq-go/internal/transport"
+	"github.com/kdoqdb/kdoq-go/transport"
 )
 
 // Capability is a set of protocol capability bits.
@@ -49,11 +48,8 @@ type ConnectOption interface{ applyConnect(*ConnectOptions) }
 type ConnectOptions struct {
 	Host, Username, Password, Database string
 	Port                               int
-	// TLSConfig verifies the server certificate. It is cloned.
-	TLSConfig *tls.Config
-	// CertificateHash is the SHA-256 of the DER leaf certificate of a
-	// self-signed server. It replaces certificate verification.
-	CertificateHash []byte
+	// Transport selects the connection binding. Nil defaults to direct QUIC.
+	Transport transport.Transport
 	// Capabilities selects the required and optional capabilities.
 	Capabilities Capabilities
 	// ConnectTimeout bounds transport setup, HELLO and AUTH (10s).
@@ -68,8 +64,7 @@ type ConnectOptions struct {
 	// must not block.
 	OnState func(State, error)
 
-	dialer transport.Dialer
-	nonce  string
+	nonce string
 }
 
 func (o ConnectOptions) applyConnect(t *ConnectOptions) {
@@ -80,11 +75,8 @@ func (o ConnectOptions) applyConnect(t *ConnectOptions) {
 	if o.Port != 0 {
 		t.Port = o.Port
 	}
-	if o.TLSConfig != nil {
-		t.TLSConfig = o.TLSConfig
-	}
-	if o.CertificateHash != nil {
-		t.CertificateHash = o.CertificateHash
+	if o.Transport != nil {
+		t.Transport = o.Transport
 	}
 	if o.Capabilities != (Capabilities{}) {
 		t.Capabilities = o.Capabilities
@@ -103,9 +95,6 @@ func (o ConnectOptions) applyConnect(t *ConnectOptions) {
 	}
 	if o.OnState != nil {
 		t.OnState = o.OnState
-	}
-	if o.dialer != nil {
-		t.dialer = o.dialer
 	}
 	setString(&t.nonce, o.nonce)
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kdoqdb/kdoq-go"
+	"github.com/kdoqdb/kdoq-go/transport"
 	"github.com/kdoqdb/kdoq-go/value"
 )
 
@@ -30,9 +31,13 @@ func ExampleConnect() {
 	certificateDER := []byte("the server's DER certificate, delivered over a trusted channel")
 	hash := sha256.Sum256(certificateDER)
 
+	tr, err := transport.NewQUIC(transport.QUICConfig{TLS: transport.TLSConfig{CertificateHash: hash[:]}})
+	if err != nil {
+		log.Fatal(err)
+	}
 	client, err := kdoq.Connect(ctx, "kdoq://ann@db.example.com:27505/shop", kdoq.ConnectOptions{
-		Password:        "the password stays out of the DSN",
-		CertificateHash: hash[:],
+		Password:  "the password stays out of the DSN",
+		Transport: tr,
 		OnState: func(state kdoq.State, err error) {
 			log.Printf("connection is %v (%v)", state, err)
 		},

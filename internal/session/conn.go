@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 
 	"github.com/kdoqdb/kdoq-go/internal/scram"
-	"github.com/kdoqdb/kdoq-go/internal/transport"
 	"github.com/kdoqdb/kdoq-go/internal/wire"
+	"github.com/kdoqdb/kdoq-go/transport"
 )
 
 // Authentication methods and protocol constants.
@@ -47,7 +47,7 @@ type Info struct {
 
 // Conn is one established native connection.
 type Conn struct {
-	sess    transport.Session
+	sess    transport.Connection
 	info    Info
 	ceiling uint64
 
@@ -59,6 +59,7 @@ type Conn struct {
 
 	mu      sync.Mutex
 	acks    map[uint64]chan bool
+	cancels chan uint64
 	failure error
 	done    chan struct{}
 	ended   bool
@@ -67,31 +68,33 @@ type Conn struct {
 // Open sets up the control stream and authenticates. It does not return
 // before READY has been received and, for SCRAM, the server signature has been
 // verified.
-func Open(ctx context.Context, sess transport.Session, s Settings) (*Conn, error) {
+func Open(ctx context.Context, sess transport.Connection, s Settings) (*Conn, error) {
 	c := &Conn{
-		sess: sess,
-		acks: map[uint64]chan bool{},
-		done: make(chan struct{}),
+		sess:    sess,
+		acks:    map[uint64]chan bool{},
+		cancels: make(chan uint64, 64),
+		done:    make(chan struct{}),
 	}
-	stop := context.AfterFunc(ctx, func() { _ = sess.Close(0) })
+	stop := context.AfterFunc(ctx, func() { _ = sess.Close() })
 	err := c.setup(ctx, s)
 	if !stop() && err == nil {
 		// The context ended while setup finished; the session is already closed.
 		err = ctx.Err()
 	}
 	if err != nil {
-		_ = sess.Close(0)
+		_ = sess.Close()
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return nil, ctxErr
 		}
 		return nil, err
 	}
 	go c.controlLoop()
+	go c.cancelLoop()
 	return c, nil
 }
 
 func (c *Conn) setup(ctx context.Context, s Settings) error {
-	stream, err := c.sess.OpenStream(ctx)
+	stream, err := c.sess.OpenControl(ctx)
 	if err != nil {
 		return &LostError{Cause: err}
 	}
@@ -310,7 +313,7 @@ func (c *Conn) end(cause error) {
 	}
 	c.mu.Unlock()
 	close(c.done)
-	_ = c.sess.Close(0)
+	_ = c.sess.Close()
 }
 
 // Info returns the session established by setup.
@@ -342,10 +345,10 @@ func (c *Conn) Revoked() bool {
 		return true
 	}
 	var closed *transport.SessionError
-	if errors.As(failure, &closed) && closed.Code == CloseRevoked {
+	if errors.As(failure, &closed) && closed.Domain == transport.DomainNative && closed.Code == CloseRevoked {
 		return true
 	}
-	return errors.As(c.sess.Err(), &closed) && closed.Code == CloseRevoked
+	return errors.As(c.sess.Err(), &closed) && closed.Domain == transport.DomainNative && closed.Code == CloseRevoked
 }
 
 // Failure returns the error that ended the connection, if the server sent one.
@@ -361,14 +364,37 @@ func (c *Conn) Cancel(requestID uint64) {
 	if !c.Alive() {
 		return
 	}
-	var b wire.Builder
-	b.U64(1, c.nextControl.Add(1)).U64(2, requestID)
-	_ = c.send(wire.Encode(wire.KindCancel, b.Bytes()))
+	select {
+	case c.cancels <- requestID:
+	case <-c.done:
+	default:
+		// One worker and a finite queue bound blocked control output. Losing this
+		// session cancels its remaining work rather than accumulating callbacks.
+		c.end(&LostError{Cause: errors.New("control cancellation queue is full")})
+	}
+}
+
+func (c *Conn) cancelLoop() {
+	for {
+		select {
+		case <-c.done:
+			return
+		case requestID := <-c.cancels:
+			var b wire.Builder
+			b.U64(1, c.nextControl.Add(1)).U64(2, requestID)
+			if err := c.send(wire.Encode(wire.KindCancel, b.Bytes())); err != nil {
+				c.end(err)
+				return
+			}
+		}
+	}
 }
 
 // Logout ends access: LOGOUT, then the acknowledgment (bounded by ctx), then
 // the transport closes.
 func (c *Conn) Logout(ctx context.Context) error {
+	stop := context.AfterFunc(ctx, c.Close)
+	defer stop()
 	if !c.Alive() {
 		return nil
 	}

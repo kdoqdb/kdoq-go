@@ -37,7 +37,7 @@ func (c *Call) Fail(code uint16, unknown bool) {
 }
 
 // Reset resets the response stream with an application code.
-func (c *Call) Reset(code uint64) { c.stream.CancelWrite(code) }
+func (c *Call) Reset(code uint64) { transport.Reset(c.stream, code) }
 
 // Truncate ends the response stream cleanly without END or ERROR.
 func (c *Call) Truncate() { _ = c.stream.CloseWrite() }
@@ -87,12 +87,12 @@ func (c *Call) Document() (any, []byte, error) {
 func (c *Conn) operation(stream transport.Stream) {
 	frame, err := wire.ReadFrame(stream, c.ceiling)
 	if err != nil || frame.Kind != wire.KindCommand {
-		stream.CancelWrite(1)
+		transport.Reset(stream, 1)
 		return
 	}
 	command, err := wire.Parse(frame.Payload)
 	if err != nil {
-		stream.CancelWrite(1)
+		transport.Reset(stream, 1)
 		return
 	}
 	op, _ := command.RequireU16(1)
