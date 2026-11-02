@@ -39,13 +39,20 @@ func (h *h2Transport) Dial(ctx context.Context, address string) (Connection, err
 	observed := &h2Socket{Conn: secured, owner: c}
 	// A dedicated ClientConn cannot pool, redial or attach operations to another
 	// native session. RoundTrip also supports concurrent request/response bodies.
-	driver, err := http2.ConfigureTransports(&http.Transport{})
-	if err == nil {
-		driver.DisableCompression = true
-		driver.MaxHeaderListSize = 8192
-		driver.StrictMaxConcurrentStreams = true
-		c.client, err = driver.NewClientConn(observed)
+	protocols := new(http.Protocols)
+	protocols.SetHTTP2(true)
+	driver := &http.Transport{
+		Protocols:              protocols,
+		DisableCompression:     true,
+		MaxResponseHeaderBytes: 8192,
+		HTTP2:                  &http.HTTP2Config{StrictMaxConcurrentRequests: true},
+		DialTLSContext: func(context.Context, string, string) (net.Conn, error) {
+			return observed, nil
+		},
 	}
+	// Use Go's ClientConn directly: the x/net/http2 compatibility adapter can
+	// reenter its own mutex through Go 1.27's synchronous state hook.
+	c.client, err = driver.NewClientConn(ctx, "https", address)
 	if err != nil {
 		_ = secured.Close()
 		return nil, h2Error(err)
@@ -59,7 +66,7 @@ func (h *h2Transport) Dial(ctx context.Context, address string) (Connection, err
 
 type h2Connection struct {
 	address string
-	client  *http2.ClientConn
+	client  *http.ClientConn
 	done    chan struct{}
 	once    sync.Once
 	mu      sync.Mutex
@@ -135,7 +142,7 @@ func (c *h2Connection) open(ctx context.Context, path string) (Stream, error) {
 }
 
 type h2Socket struct {
-	net.Conn
+	*tls.Conn
 	owner *h2Connection
 }
 

@@ -71,8 +71,9 @@ testdata/api.txt                           the surface listing
 e2e/                                       end-to-end suite against a real kdoq (build tag e2e)
 ```
 
-The module uses `quic-go` and `webtransport-go` for QUIC bindings and
-`golang.org/x/net/http2` for H2. The remaining implementation uses the standard library.
+The module uses `quic-go` and `webtransport-go` for QUIC bindings and Go's
+`net/http.ClientConn` for H2. `golang.org/x/net/http2` supplies H2 error types for
+error mapping. The remaining implementation uses the standard library.
 
 `webtransport-go` is pinned to v0.9.0 with `quic-go` v0.53.0 and `qpack` v0.5.1. Later releases
 refuse a server that does not offer QUIC stream reset partial delivery, and the server's

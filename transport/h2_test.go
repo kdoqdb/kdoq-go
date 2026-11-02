@@ -19,7 +19,13 @@ import (
 
 func h2Server(t *testing.T, handler http.HandlerFunc) (*httptest.Server, transport.TLSConfig) {
 	t.Helper()
+	return h2ServerWithStreamLimit(t, handler, 0)
+}
+
+func h2ServerWithStreamLimit(t *testing.T, handler http.HandlerFunc, limit int) (*httptest.Server, transport.TLSConfig) {
+	t.Helper()
 	srv := httptest.NewUnstartedServer(handler)
+	srv.Config.HTTP2 = &http.HTTP2Config{MaxConcurrentStreams: limit}
 	srv.EnableHTTP2 = true
 	srv.StartTLS()
 	t.Cleanup(srv.Close)
@@ -163,7 +169,15 @@ func TestH2ResetPreservesItsCodeDomain(t *testing.T) {
 
 func TestH2OpeningHonorsCancellationBeforeResponseHeaders(t *testing.T) {
 	entered := make(chan struct{})
-	srv, trust := h2Server(t, func(w http.ResponseWriter, r *http.Request) { close(entered); <-r.Context().Done() })
+	release := make(chan struct{})
+	defer close(release)
+	srv, trust := h2Server(t, func(w http.ResponseWriter, r *http.Request) {
+		close(entered)
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	})
 	c := dialH2(t, trust, srv.Listener.Addr().String())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -171,8 +185,12 @@ func TestH2OpeningHonorsCancellationBeforeResponseHeaders(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer st.Close()
-	<-entered
+	defer st.Abort()
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("opening stream did not reach the server")
+	}
 	cancel()
 	result := make(chan error, 1)
 	go func() { _, err := st.Read(make([]byte, 1)); result <- err }()
@@ -220,5 +238,50 @@ func TestH2CompletionRejectsTrailingData(t *testing.T) {
 	}
 	if err = st.Close(); !errors.Is(err, transport.ErrTrailingData) {
 		t.Fatalf("Close = %v", err)
+	}
+}
+
+func TestH2ConcurrentOperationsProgressWhileSettingsArrive(t *testing.T) {
+	// Increasing the initial client limit of 100 while requests start exercises
+	// synchronous state notifications that could deadlock the x/net adapter.
+	srv, trust := h2ServerWithStreamLimit(t, func(w http.ResponseWriter, r *http.Request) {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
+			return
+		}
+		w.Header().Set("Content-Type", "application/vnd.kdoq.native")
+		_, _ = io.WriteString(w, "ok")
+	}, 250)
+	conn := dialH2(t, trust, srv.Listener.Addr().String())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	request := func() error {
+		st, err := conn.OpenOperation(ctx)
+		if err != nil {
+			return err
+		}
+		defer st.Abort()
+		if err = st.CloseWrite(); err != nil {
+			return err
+		}
+		body, err := io.ReadAll(st)
+		if err == nil && string(body) != "ok" {
+			err = errors.New("incorrect H2 response")
+		}
+		return err
+	}
+	const operations = 32
+	result := make(chan error, operations)
+	for range operations {
+		go func() { result <- request() }()
+	}
+	for range operations {
+		select {
+		case err := <-result:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-ctx.Done():
+			t.Fatal("concurrent H2 operations stalled while settings arrived")
+		}
 	}
 }
