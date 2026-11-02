@@ -17,10 +17,8 @@
 // [ConnectOptions].CertificateHash; otherwise the system roots or
 // [ConnectOptions].TLSConfig verify it.
 //
-// The client's default port is [DefaultPort] (27505), which differs from the
-// server's current default. Set the port of the server's native listener, the
-// quic entry of http.listen in its configuration file, to the value the DSN
-// names, or name the server's port in the DSN.
+// When neither the DSN nor [ConnectOptions] names a port, the client uses
+// [DefaultPort] (27505).
 //
 // # Contexts, timeouts and errors
 //

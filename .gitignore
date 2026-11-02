@@ -1,0 +1,17 @@
+# Go: test binaries and profiles from `go test -c`, -cpuprofile, -memprofile
+*.test
+*.out
+*.prof
+
+# Go: coverage
+coverage.*
+*.cover
+
+# Local workspace file; the library has none (see CONTRIBUTING.md)
+go.work
+go.work.sum
+
+# macOS and editors
+.DS_Store
+.idea/
+.vscode/

@@ -7,8 +7,7 @@ import (
 )
 
 // DefaultPort is the port a client uses when neither the DSN nor the options
-// name one. The server and the other kdoq clients still default to 8443; set
-// the server's native listener port to match (see the library documentation).
+// name one.
 const DefaultPort = 27505
 
 // DSN is a parsed connection string.
