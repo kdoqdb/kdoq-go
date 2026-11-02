@@ -1,0 +1,259 @@
+kdoq/value: func (c CalendarDate) String() string
+kdoq/value: func (c CalendarDate) ToTime(loc *time.Location) time.Time
+kdoq/value: func (d Decimal128) Bytes() []byte
+kdoq/value: func (d Decimal128) String() string
+kdoq/value: func (e *Error) Error() string
+kdoq/value: func (o ObjectID) String() string
+kdoq/value: func CalendarDateOf(t time.Time) CalendarDate
+kdoq/value: func Format(v any, indent int) string
+kdoq/value: func KeyOf(v any) (key string, ok bool, err error)
+kdoq/value: func Marshal(v any) (any, error)
+kdoq/value: func ParseDecimal128(text string) (Decimal128, error)
+kdoq/value: func Unmarshal(src, dst any) error
+kdoq/value: func UnmarshalKeyed(src any, key string, dst any) error
+kdoq/value: type Array []any
+kdoq/value: type Binary struct{ Subtype byte; Data []byte }
+kdoq/value: type CalendarDate struct{ Year int; Month, Day uint8 }
+kdoq/value: type Code struct{ Source string }
+kdoq/value: type D []E
+kdoq/value: type Decimal128 [16]byte
+kdoq/value: type Doc map[string]any
+kdoq/value: type E struct{ Key string; Value any }
+kdoq/value: type Error struct{ Path string; Message string }
+kdoq/value: type Marshaler interface{ MarshalKdoq() (any, error) }
+kdoq/value: type MaxKey struct{}
+kdoq/value: type MinKey struct{}
+kdoq/value: type ObjectID [12]byte
+kdoq/value: type RegExp struct{ Pattern, Flags string }
+kdoq/value: type Timestamp struct{ Seconds, Increment uint32 }
+kdoq/value: type Unmarshaler interface{ UnmarshalKdoq(v any) error }
+kdoq/value: var Undefined
+kdoq: const AccessAdmin
+kdoq: const AccessConnect AccessLevel
+kdoq: const AccessRead
+kdoq: const AccessWrite
+kdoq: const CapAdministration Capability
+kdoq: const CapDocuments Capability
+kdoq: const CapMutations Capability
+kdoq: const CapQueries Capability
+kdoq: const CodeAdmissionTimeout ErrorCode
+kdoq: const CodeAlreadyExists ErrorCode
+kdoq: const CodeAuthentication ErrorCode
+kdoq: const CodeCancelled ErrorCode
+kdoq: const CodeConflict ErrorCode
+kdoq: const CodeCursorExpired ErrorCode
+kdoq: const CodeCursorInUse ErrorCode
+kdoq: const CodeExecutionMemoryLimit ErrorCode
+kdoq: const CodeForbidden ErrorCode
+kdoq: const CodeIncompatible ErrorCode
+kdoq: const CodeInvalidDocument ErrorCode
+kdoq: const CodeLimitExceeded ErrorCode
+kdoq: const CodeMalformed ErrorCode
+kdoq: const CodeMemoryWaitTimeout ErrorCode
+kdoq: const CodeNotFound ErrorCode
+kdoq: const CodeNotReady ErrorCode
+kdoq: const CodeOverloaded ErrorCode
+kdoq: const CodeQueryQueueFull ErrorCode
+kdoq: const CodeRevoked ErrorCode
+kdoq: const CodeSendStalled ErrorCode
+kdoq: const CodeStorage ErrorCode
+kdoq: const CodeUnavailable ErrorCode
+kdoq: const CodeUnloaded ErrorCode
+kdoq: const CodeUnsupported ErrorCode
+kdoq: const CodeWouldWait ErrorCode
+kdoq: const CodeWrongCase ErrorCode
+kdoq: const DefaultPort
+kdoq: const DurabilityDefault Durability
+kdoq: const DurabilityDurable
+kdoq: const DurabilityRelaxed
+kdoq: const ModeUpdate MutationMode
+kdoq: const ModeUpsert
+kdoq: const OutcomeNotApplied Outcome
+kdoq: const OutcomeUnknown
+kdoq: const ResourceLoaded ResourceState
+kdoq: const ResourceLoading ResourceState
+kdoq: const ResourceUnavailable ResourceState
+kdoq: const ResourceUnloaded ResourceState
+kdoq: const ResourceUnloading ResourceState
+kdoq: const StateClosed
+kdoq: const StateConnected State
+kdoq: const StateDisconnected
+kdoq: func (c *Client) AttachCursor[R any](id CursorID) *Cursor[R]
+kdoq: func (c *Client) Capabilities() Capability
+kdoq: func (c *Client) Close(ctx context.Context) error
+kdoq: func (c *Client) Closed() <-chan struct{}
+kdoq: func (c *Client) DB(name string) (*Database, error)
+kdoq: func (c *Client) Databases() *Databases
+kdoq: func (c *Client) Err() error
+kdoq: func (c *Client) Server() *Server
+kdoq: func (c *Client) Session() (SessionInfo, AccessLevel, bool)
+kdoq: func (c *Client) Sessions() *Sessions
+kdoq: func (c *Client) State() State
+kdoq: func (c *Collection[T]) AggregateCursor[R any](ctx context.Context, filter string, pipeline []PipelineStage, opts ...FindOption) (*Cursor[R], error)
+kdoq: func (c *Collection[T]) Aggregate[R any](ctx context.Context, filter string, pipeline []PipelineStage, opts ...FindOption) *Query[R]
+kdoq: func (c *Collection[T]) Bulk(ctx context.Context, stmts []BulkStatement, opts ...BulkOption) (BulkResult, error)
+kdoq: func (c *Collection[T]) Checkpoint(ctx context.Context) error
+kdoq: func (c *Collection[T]) Count(ctx context.Context, filter string, opts ...FindOption) (uint64, error)
+kdoq: func (c *Collection[T]) Create(ctx context.Context) error
+kdoq: func (c *Collection[T]) Database() string
+kdoq: func (c *Collection[T]) Delete(ctx context.Context, key Key, opts ...WriteOption) (Key, error)
+kdoq: func (c *Collection[T]) Find(ctx context.Context, filter string, opts ...FindOption) *Query[T]
+kdoq: func (c *Collection[T]) FindCursor(ctx context.Context, filter string, opts ...FindOption) (*Cursor[T], error)
+kdoq: func (c *Collection[T]) Get(ctx context.Context, key Key) (T, error)
+kdoq: func (c *Collection[T]) Info(ctx context.Context) (CollectionInfo, error)
+kdoq: func (c *Collection[T]) Insert(ctx context.Context, doc T, opts ...WriteOption) (Key, error)
+kdoq: func (c *Collection[T]) Load(ctx context.Context) error
+kdoq: func (c *Collection[T]) Name() string
+kdoq: func (c *Collection[T]) Put(ctx context.Context, key Key, doc T, opts ...WriteOption) (Key, error)
+kdoq: func (c *Collection[T]) Unload(ctx context.Context) error
+kdoq: func (c *Collection[T]) Update(ctx context.Context, t Target, stages []Stage, opts ...WriteOption) (MutationResult, error)
+kdoq: func (c *Collection[T]) Upsert(ctx context.Context, t Target, stages []Stage, opts ...WriteOption) (MutationResult, error)
+kdoq: func (c *Collection[T]) WALSync(ctx context.Context) error
+kdoq: func (c *Collections) Create(ctx context.Context, name string) error
+kdoq: func (c *Collections) Get(ctx context.Context, name string) (CollectionInfo, error)
+kdoq: func (c *Collections) List(ctx context.Context) ([]CollectionInfo, error)
+kdoq: func (c *Collections) Load(ctx context.Context, name string) error
+kdoq: func (c *Collections) Unload(ctx context.Context, name string) error
+kdoq: func (c *Cursor[T]) Close(ctx context.Context) error
+kdoq: func (c *Cursor[T]) ID() CursorID
+kdoq: func (c *Cursor[T]) Next(ctx context.Context, opts ...NextOption) (Page[T], error)
+kdoq: func (c Capability) Has(c2 Capability) bool
+kdoq: func (c ErrorCode) String() string
+kdoq: func (d *Database) Collection[T any](name string) *Collection[T]
+kdoq: func (d *Database) Collections() *Collections
+kdoq: func (d *Database) Create(ctx context.Context) error
+kdoq: func (d *Database) Docs(name string) *Collection[value.Doc]
+kdoq: func (d *Database) Info(ctx context.Context) (DatabaseInfo, error)
+kdoq: func (d *Database) Load(ctx context.Context) error
+kdoq: func (d *Database) Name() string
+kdoq: func (d *Database) Unload(ctx context.Context) error
+kdoq: func (d *Databases) Create(ctx context.Context, name string) error
+kdoq: func (d *Databases) Get(ctx context.Context, name string) (DatabaseInfo, error)
+kdoq: func (d *Databases) List(ctx context.Context) ([]DatabaseInfo, error)
+kdoq: func (d *Databases) Load(ctx context.Context, name string) error
+kdoq: func (d *Databases) Unload(ctx context.Context, name string) error
+kdoq: func (e *BulkError) Error() string
+kdoq: func (e *BulkError) Unwrap() error
+kdoq: func (e *ConfigError) Error() string
+kdoq: func (e *ConnectionError) Error() string
+kdoq: func (e *ConnectionError) Unwrap() error
+kdoq: func (e *Error) Error() string
+kdoq: func (e *Error) Is(target error) bool
+kdoq: func (e *Error) Unwrap() error
+kdoq: func (e *IncompleteError) Error() string
+kdoq: func (e *IncompleteError) Unwrap() error
+kdoq: func (k Key) Bytes() []byte
+kdoq: func (k Key) String() string
+kdoq: func (k Key) Text() (string, bool)
+kdoq: func (o Outcome) String() string
+kdoq: func (q *Query[T]) All() iter.Seq2[Item[T], error]
+kdoq: func (q *Query[T]) Cancel() error
+kdoq: func (q *Query[T]) Collect() ([]Item[T], error)
+kdoq: func (q *Query[T]) CursorID() (CursorID, bool)
+kdoq: func (q *Query[T]) Statistics() (*Statistics, bool)
+kdoq: func (q *Query[T]) Values() iter.Seq2[T, error]
+kdoq: func (s *Server) Capabilities(ctx context.Context) (ServerCapabilities, error)
+kdoq: func (s *Server) Health(ctx context.Context) (bool, error)
+kdoq: func (s *Sessions) Get(ctx context.Context, id SessionID) (SessionInfo, error)
+kdoq: func (s *Sessions) List(ctx context.Context) ([]SessionInfo, error)
+kdoq: func (s *Sessions) Revoke(ctx context.Context, id SessionID) error
+kdoq: func (s State) String() string
+kdoq: func (t Target) Multi() Target
+kdoq: func ByKey(k Key) Target
+kdoq: func Connect(ctx context.Context, dsn string, opts ...ConnectOption) (*Client, error)
+kdoq: func Count() PipelineStage
+kdoq: func Expr(text string) Operand
+kdoq: func Match(expr string) PipelineStage
+kdoq: func ParseDSN(dsn string) (DSN, error)
+kdoq: func Project(expr string) PipelineStage
+kdoq: func Reduce(key, initial, accumulate string) PipelineStage
+kdoq: func Replace(doc any) Stage
+kdoq: func Set(fields any) Stage
+kdoq: func SetPath(path []string, v any) Stage
+kdoq: func Unset(paths ...string) Stage
+kdoq: func Where(filter string) Target
+kdoq: type AccessLevel uint8
+kdoq: type Backoff struct{ Initial, Max time.Duration; Factor float64; NoJitter bool }
+kdoq: type Budget struct{ MemoryBytes, Steps, ExpressionBytes uint64; AdmissionWait, MemoryWait, Active time.Duration }
+kdoq: type BulkError struct{ Err *Error; Items []BulkItem }
+kdoq: type BulkItem struct{ Index int; Status ErrorCode; MutationResult }
+kdoq: type BulkOption interface{ (sealed) }
+kdoq: type BulkOptions struct{ Ordered bool; Durability Durability; ... }
+kdoq: type BulkResult struct{ Executed int; Items []BulkItem }
+kdoq: type BulkStatement struct{ Mode MutationMode; Target Target; Stages []Stage }
+kdoq: type Capabilities struct{ Required, Optional Capability }
+kdoq: type Capability uint64
+kdoq: type Client struct{ ... }
+kdoq: type CollectionInfo struct{ DatabaseInfo; LockReleased bool; Excluded bool }
+kdoq: type Collection[T any] struct{ ... }
+kdoq: type Collections struct{ ... }
+kdoq: type ConfigError struct{ Message string }
+kdoq: type ConnectOption interface{ (sealed) }
+kdoq: type ConnectOptions struct{ Host, Username, Password, Database string; Port int; TLSConfig *tls.Config; CertificateHash []byte; Capabilities Capabilities; ConnectTimeout time.Duration; OperationTimeout time.Duration; Retry *RetryPolicy; NoReconnect bool; OnState func(State, error); ... }
+kdoq: type ConnectionError struct{ Message string; Outcome Outcome; RequestID uint64; Err error }
+kdoq: type CursorID uint64
+kdoq: type Cursor[T any] struct{ ... }
+kdoq: type DSN struct{ Host string; Port int; Username string; Password string; Database string }
+kdoq: type Database struct{ ... }
+kdoq: type DatabaseInfo struct{ Name string; State ResourceState; Diagnostic string }
+kdoq: type Databases struct{ ... }
+kdoq: type Diagnostic struct{ Expression string; Stage *uint64; Span struct{ Start, End uint64 }; Reason string }
+kdoq: type Durability uint8
+kdoq: type Error struct{ Code ErrorCode; Outcome Outcome; RequestID uint64; Message string; ... }
+kdoq: type ErrorCode uint16
+kdoq: type FindOption interface{ (sealed) }
+kdoq: type FindOptions struct{ PageSize int; IdleTTL time.Duration; Skip, Limit uint64; Budget Budget; Observe Observe; OnProgress func(Progress); OnDiagnostic func(Diagnostic) }
+kdoq: type GroupKey struct{ Value any }
+kdoq: type IncompleteError struct{ Outcome Outcome; RequestID uint64; Reset bool; ResetCode uint64; Err error }
+kdoq: type Item[T any] struct{ Key Key; Group *GroupKey; Value T }
+kdoq: type Key string
+kdoq: type MutationMode uint8
+kdoq: type MutationResult struct{ Key Key; Matched, Modified uint64; Inserted bool }
+kdoq: type NextOption interface{ (sealed) }
+kdoq: type NextOptions struct{ Size int; OnProgress func(Progress); OnDiagnostic func(Diagnostic) }
+kdoq: type Observe struct{ Progress, Diagnostics, Statistics bool }
+kdoq: type Operand struct{ ... }
+kdoq: type Outcome uint8
+kdoq: type Page[T any] struct{ Items []Item[T]; Done bool; Statistics *Statistics }
+kdoq: type PipelineStage struct{ ... }
+kdoq: type Progress struct{ Processed, Total uint64 }
+kdoq: type Query[T any] struct{ ... }
+kdoq: type ResourceState string
+kdoq: type RetryPolicy struct{ Attempts int; Backoff Backoff }
+kdoq: type Server struct{ ... }
+kdoq: type ServerCapabilities struct{ Operations []uint32; Encoding uint32; Capabilities Capability }
+kdoq: type SessionID uint64
+kdoq: type SessionInfo struct{ ID SessionID; Username string; Peer string; CreatedAt time.Time }
+kdoq: type Sessions struct{ ... }
+kdoq: type Stage struct{ ... }
+kdoq: type State int
+kdoq: type Statistics struct{ Source struct { Total, Processed, BloomCandidates uint64 }; Documents struct { Processed, Selected, Rejected, FilterErrors uint64 }; Budget struct { Steps, ValueBytes uint64 Active time.Duration }; Memory struct { Current, Peak uint64 }; Reduction *struct{ AccumulatedDocuments, GroupsCreated uint64 } }
+kdoq: type Target struct{ ... }
+kdoq: type WriteOption interface{ (sealed) }
+kdoq: type WriteOptions struct{ Durability Durability; Key Key }
+kdoq: var ErrAdmissionTimeout error
+kdoq: var ErrAlreadyExists error
+kdoq: var ErrAuthentication error
+kdoq: var ErrCancelled error
+kdoq: var ErrConflict error
+kdoq: var ErrCursorExpired error
+kdoq: var ErrCursorInUse error
+kdoq: var ErrExecutionMemoryLimit error
+kdoq: var ErrForbidden error
+kdoq: var ErrIncompatible error
+kdoq: var ErrInvalidDocument error
+kdoq: var ErrLimitExceeded error
+kdoq: var ErrMalformed error
+kdoq: var ErrMemoryWaitTimeout error
+kdoq: var ErrNotFound error
+kdoq: var ErrNotReady error
+kdoq: var ErrOverloaded error
+kdoq: var ErrQueryQueueFull error
+kdoq: var ErrRevoked error
+kdoq: var ErrSendStalled error
+kdoq: var ErrStorage error
+kdoq: var ErrUnavailable error
+kdoq: var ErrUnloaded error
+kdoq: var ErrUnsupported error
+kdoq: var ErrWouldWait error
+kdoq: var ErrWrongCase error

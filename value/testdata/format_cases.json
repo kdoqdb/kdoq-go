@@ -1,0 +1,1015 @@
+[
+ {
+  "name": "null",
+  "indent": 2,
+  "value": null,
+  "expected": "null"
+ },
+ {
+  "name": "undefined",
+  "indent": 2,
+  "value": {
+   "$undefined": 1
+  },
+  "expected": "undefined"
+ },
+ {
+  "name": "true",
+  "indent": 2,
+  "value": true,
+  "expected": "true"
+ },
+ {
+  "name": "false",
+  "indent": 2,
+  "value": false,
+  "expected": "false"
+ },
+ {
+  "name": "string hello",
+  "indent": 2,
+  "value": "plain",
+  "expected": "\"plain\""
+ },
+ {
+  "name": "string ",
+  "indent": 2,
+  "value": "empty",
+  "expected": "\"empty\""
+ },
+ {
+  "name": "string a\"b\\c",
+  "indent": 2,
+  "value": "quote and backslash",
+  "expected": "\"quote and backslash\""
+ },
+ {
+  "name": "string \b\f\n\r\t\u0001\u001f",
+  "indent": 2,
+  "value": "controls",
+  "expected": "\"controls\""
+ },
+ {
+  "name": "string ",
+  "indent": 2,
+  "value": "delete",
+  "expected": "\"delete\""
+ },
+ {
+  "name": "string <a href=\"x\">&</a>",
+  "indent": 2,
+  "value": "html",
+  "expected": "\"html\""
+ },
+ {
+  "name": "string héllo wörld ✓ 日本 😀",
+  "indent": 2,
+  "value": "unicode",
+  "expected": "\"unicode\""
+ },
+ {
+  "name": "string a b c",
+  "indent": 2,
+  "value": "line separators",
+  "expected": "\"line separators\""
+ },
+ {
+  "name": "int zero",
+  "indent": 2,
+  "value": {
+   "$int": "0"
+  },
+  "expected": "0"
+ },
+ {
+  "name": "int int32 max",
+  "indent": 2,
+  "value": {
+   "$int": "2147483647"
+  },
+  "expected": "2147483647"
+ },
+ {
+  "name": "int int32 min",
+  "indent": 2,
+  "value": {
+   "$int": "-2147483648"
+  },
+  "expected": "-2147483648"
+ },
+ {
+  "name": "int negative",
+  "indent": 2,
+  "value": {
+   "$int": "-7"
+  },
+  "expected": "-7"
+ },
+ {
+  "name": "int safe max",
+  "indent": 2,
+  "value": {
+   "$int": "9007199254740991"
+  },
+  "expected": "9007199254740991"
+ },
+ {
+  "name": "int safe min",
+  "indent": 2,
+  "value": {
+   "$int": "-9007199254740991"
+  },
+  "expected": "-9007199254740991"
+ },
+ {
+  "name": "int above safe",
+  "indent": 2,
+  "value": {
+   "$int": "9007199254740992"
+  },
+  "expected": "NumberLong(\"9007199254740992\")"
+ },
+ {
+  "name": "int below safe",
+  "indent": 2,
+  "value": {
+   "$int": "-9007199254740992"
+  },
+  "expected": "NumberLong(\"-9007199254740992\")"
+ },
+ {
+  "name": "int int64 max",
+  "indent": 2,
+  "value": {
+   "$int": "9223372036854775807"
+  },
+  "expected": "NumberLong(\"9223372036854775807\")"
+ },
+ {
+  "name": "int int64 min",
+  "indent": 2,
+  "value": {
+   "$int": "-9223372036854775808"
+  },
+  "expected": "NumberLong(\"-9223372036854775808\")"
+ },
+ {
+  "name": "uint zero",
+  "indent": 2,
+  "value": {
+   "$uint": "0"
+  },
+  "expected": "0"
+ },
+ {
+  "name": "uint uint32 max",
+  "indent": 2,
+  "value": {
+   "$uint": "4294967295"
+  },
+  "expected": "4294967295"
+ },
+ {
+  "name": "uint safe max",
+  "indent": 2,
+  "value": {
+   "$uint": "9007199254740991"
+  },
+  "expected": "9007199254740991"
+ },
+ {
+  "name": "uint above safe",
+  "indent": 2,
+  "value": {
+   "$uint": "9007199254740992"
+  },
+  "expected": "NumberLong(\"9007199254740992\")"
+ },
+ {
+  "name": "uint uint64 max",
+  "indent": 2,
+  "value": {
+   "$uint": "18446744073709551615"
+  },
+  "expected": "NumberLong(\"18446744073709551615\")"
+ },
+ {
+  "name": "double zero",
+  "indent": 2,
+  "value": {
+   "$double": "0"
+  },
+  "expected": "0"
+ },
+ {
+  "name": "double negative zero",
+  "indent": 2,
+  "value": {
+   "$double": "-0"
+  },
+  "expected": "-0"
+ },
+ {
+  "name": "double half",
+  "indent": 2,
+  "value": {
+   "$double": "1.5"
+  },
+  "expected": "1.5"
+ },
+ {
+  "name": "double tenth sum",
+  "indent": 2,
+  "value": {
+   "$double": "0.30000000000000004"
+  },
+  "expected": "0.30000000000000004"
+ },
+ {
+  "name": "double large",
+  "indent": 2,
+  "value": {
+   "$double": "1e21"
+  },
+  "expected": "1e+21"
+ },
+ {
+  "name": "double just below exponent",
+  "indent": 2,
+  "value": {
+   "$double": "123456789012345680000"
+  },
+  "expected": "123456789012345680000"
+ },
+ {
+  "name": "double small",
+  "indent": 2,
+  "value": {
+   "$double": "1e-7"
+  },
+  "expected": "1e-7"
+ },
+ {
+  "name": "double not so small",
+  "indent": 2,
+  "value": {
+   "$double": "0.000001"
+  },
+  "expected": "0.000001"
+ },
+ {
+  "name": "double denormal",
+  "indent": 2,
+  "value": {
+   "$double": "5e-324"
+  },
+  "expected": "5e-324"
+ },
+ {
+  "name": "double max",
+  "indent": 2,
+  "value": {
+   "$double": "1.7976931348623157e308"
+  },
+  "expected": "1.7976931348623157e+308"
+ },
+ {
+  "name": "double negative",
+  "indent": 2,
+  "value": {
+   "$double": "-2.5e-10"
+  },
+  "expected": "-2.5e-10"
+ },
+ {
+  "name": "double nan",
+  "indent": 2,
+  "value": {
+   "$double": "NaN"
+  },
+  "expected": "NaN"
+ },
+ {
+  "name": "double inf",
+  "indent": 2,
+  "value": {
+   "$double": "Infinity"
+  },
+  "expected": "Infinity"
+ },
+ {
+  "name": "double negative inf",
+  "indent": 2,
+  "value": {
+   "$double": "-Infinity"
+  },
+  "expected": "-Infinity"
+ },
+ {
+  "name": "double integral",
+  "indent": 2,
+  "value": {
+   "$double": "100"
+  },
+  "expected": "100"
+ },
+ {
+  "name": "double big integral",
+  "indent": 2,
+  "value": {
+   "$double": "1e20"
+  },
+  "expected": "100000000000000000000"
+ },
+ {
+  "name": "datetime epoch",
+  "indent": 2,
+  "value": {
+   "$date": "1970-01-01T00:00:00.000Z"
+  },
+  "expected": "ISODate(\"1970-01-01T00:00:00.000Z\")"
+ },
+ {
+  "name": "datetime millis",
+  "indent": 2,
+  "value": {
+   "$date": "2026-11-02T10:30:00.123Z"
+  },
+  "expected": "ISODate(\"2026-11-02T10:30:00.123Z\")"
+ },
+ {
+  "name": "datetime before epoch",
+  "indent": 2,
+  "value": {
+   "$date": "1969-12-31T23:59:59.999Z"
+  },
+  "expected": "ISODate(\"1969-12-31T23:59:59.999Z\")"
+ },
+ {
+  "name": "datetime year zero",
+  "indent": 2,
+  "value": {
+   "$date": "0000-01-01T00:00:00.000Z"
+  },
+  "expected": "ISODate(\"0000-01-01T00:00:00.000Z\")"
+ },
+ {
+  "name": "datetime year 9999",
+  "indent": 2,
+  "value": {
+   "$date": "9999-12-31T23:59:59.999Z"
+  },
+  "expected": "ISODate(\"9999-12-31T23:59:59.999Z\")"
+ },
+ {
+  "name": "datetime year 10000",
+  "indent": 2,
+  "value": {
+   "$date": "+010000-01-01T00:00:00.000Z"
+  },
+  "expected": "ISODate(\"+010000-01-01T00:00:00.000Z\")"
+ },
+ {
+  "name": "datetime year minus one",
+  "indent": 2,
+  "value": {
+   "$date": "-000001-06-15T12:00:00.000Z"
+  },
+  "expected": "ISODate(\"-000001-06-15T12:00:00.000Z\")"
+ },
+ {
+  "name": "calendar date",
+  "indent": 2,
+  "value": {
+   "$calendar": "2026-11-02"
+  },
+  "expected": "Date(\"2026-11-02\")"
+ },
+ {
+  "name": "calendar date early",
+  "indent": 2,
+  "value": {
+   "$calendar": "0007-03-09"
+  },
+  "expected": "Date(\"0007-03-09\")"
+ },
+ {
+  "name": "decimal 0",
+  "indent": 2,
+  "value": {
+   "$decimal": "0"
+  },
+  "expected": "NumberDecimal(\"0\")"
+ },
+ {
+  "name": "decimal 12.50",
+  "indent": 2,
+  "value": {
+   "$decimal": "12.50"
+  },
+  "expected": "NumberDecimal(\"12.50\")"
+ },
+ {
+  "name": "decimal -1.5E+3",
+  "indent": 2,
+  "value": {
+   "$decimal": "-1.5E+3"
+  },
+  "expected": "NumberDecimal(\"-1.5E+3\")"
+ },
+ {
+  "name": "decimal 1.23E+20",
+  "indent": 2,
+  "value": {
+   "$decimal": "1.23E+20"
+  },
+  "expected": "NumberDecimal(\"1.23E+20\")"
+ },
+ {
+  "name": "decimal 0E-10",
+  "indent": 2,
+  "value": {
+   "$decimal": "0E-10"
+  },
+  "expected": "NumberDecimal(\"0E-10\")"
+ },
+ {
+  "name": "decimal -0",
+  "indent": 2,
+  "value": {
+   "$decimal": "-0"
+  },
+  "expected": "NumberDecimal(\"-0\")"
+ },
+ {
+  "name": "decimal Infinity",
+  "indent": 2,
+  "value": {
+   "$decimal": "Infinity"
+  },
+  "expected": "NumberDecimal(\"Infinity\")"
+ },
+ {
+  "name": "decimal -Infinity",
+  "indent": 2,
+  "value": {
+   "$decimal": "-Infinity"
+  },
+  "expected": "NumberDecimal(\"-Infinity\")"
+ },
+ {
+  "name": "decimal NaN",
+  "indent": 2,
+  "value": {
+   "$decimal": "NaN"
+  },
+  "expected": "NumberDecimal(\"NaN\")"
+ },
+ {
+  "name": "decimal 9.999999999999999999999999999999999E+6144",
+  "indent": 2,
+  "value": {
+   "$decimal": "9.999999999999999999999999999999999E+6144"
+  },
+  "expected": "NumberDecimal(\"9.999999999999999999999999999999999E+6144\")"
+ },
+ {
+  "name": "timestamp",
+  "indent": 2,
+  "value": {
+   "$timestamp": [
+    1700000000,
+    3
+   ]
+  },
+  "expected": "Timestamp(1700000000, 3)"
+ },
+ {
+  "name": "timestamp max",
+  "indent": 2,
+  "value": {
+   "$timestamp": [
+    4294967295,
+    4294967295
+   ]
+  },
+  "expected": "Timestamp(4294967295, 4294967295)"
+ },
+ {
+  "name": "code",
+  "indent": 2,
+  "value": {
+   "$code": "x + \"1\"\n"
+  },
+  "expected": "Code(\"x + \\\"1\\\"\\n\")"
+ },
+ {
+  "name": "object id",
+  "indent": 2,
+  "value": {
+   "$oid": "000102030405060708090a0b"
+  },
+  "expected": "ObjectId(\"000102030405060708090a0b\")"
+ },
+ {
+  "name": "regexp",
+  "indent": 2,
+  "value": {
+   "$regex": [
+    "^a/b",
+    "ilm"
+   ]
+  },
+  "expected": "/^a/b/ilm"
+ },
+ {
+  "name": "regexp no flags",
+  "indent": 2,
+  "value": {
+   "$regex": [
+    "x",
+    ""
+   ]
+  },
+  "expected": "/x/"
+ },
+ {
+  "name": "min key",
+  "indent": 2,
+  "value": {
+   "$minkey": 1
+  },
+  "expected": "MinKey"
+ },
+ {
+  "name": "max key",
+  "indent": 2,
+  "value": {
+   "$maxkey": 1
+  },
+  "expected": "MaxKey"
+ },
+ {
+  "name": "binary subtype 4",
+  "indent": 2,
+  "value": {
+   "$bin": [
+    4,
+    "00ff10"
+   ]
+  },
+  "expected": "BinData(4, \"00ff10\")"
+ },
+ {
+  "name": "binary generic",
+  "indent": 2,
+  "value": {
+   "$bin": [
+    0,
+    ""
+   ]
+  },
+  "expected": "BinData(0, \"\")"
+ },
+ {
+  "name": "binary 255",
+  "indent": 2,
+  "value": {
+   "$bin": [
+    255,
+    "abcdef"
+   ]
+  },
+  "expected": "BinData(255, \"abcdef\")"
+ },
+ {
+  "name": "empty array",
+  "indent": 2,
+  "value": [],
+  "expected": "[]"
+ },
+ {
+  "name": "empty doc",
+  "indent": 2,
+  "value": {
+   "$doc": []
+  },
+  "expected": "{}"
+ },
+ {
+  "name": "flat array",
+  "indent": 2,
+  "value": [
+   1,
+   "two",
+   null,
+   true
+  ],
+  "expected": "[\n  1,\n  \"two\",\n  null,\n  true\n]"
+ },
+ {
+  "name": "flat array compact",
+  "indent": 0,
+  "value": [
+   1,
+   "two",
+   null,
+   true
+  ],
+  "expected": "[1,\"two\",null,true]"
+ },
+ {
+  "name": "document",
+  "indent": 2,
+  "value": {
+   "$doc": [
+    [
+     "b",
+     {
+      "$int": "1"
+     }
+    ],
+    [
+     "a",
+     "x"
+    ],
+    [
+     "c",
+     null
+    ]
+   ]
+  },
+  "expected": "{\n  \"b\": 1,\n  \"a\": \"x\",\n  \"c\": null\n}"
+ },
+ {
+  "name": "document compact",
+  "indent": 0,
+  "value": {
+   "$doc": [
+    [
+     "b",
+     {
+      "$int": "1"
+     }
+    ],
+    [
+     "a",
+     "x"
+    ]
+   ]
+  },
+  "expected": "{\"b\": 1,\"a\": \"x\"}"
+ },
+ {
+  "name": "nested indent 2",
+  "indent": 2,
+  "value": {
+   "$doc": [
+    [
+     "list",
+     [
+      {
+       "$doc": [
+        [
+         "x",
+         {
+          "$int": "1"
+         }
+        ]
+       ]
+      },
+      [],
+      {
+       "$doc": []
+      }
+     ]
+    ],
+    [
+     "inner",
+     {
+      "$doc": [
+       [
+        "deep",
+        {
+         "$doc": [
+          [
+           "deeper",
+           [
+            {
+             "$int": "1"
+            },
+            [
+             {
+              "$int": "2"
+             }
+            ]
+           ]
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     "with \"quote\"",
+     {
+      "$double": "1.5"
+     }
+    ],
+    [
+     "with.dot",
+     {
+      "$int": "2"
+     }
+    ]
+   ]
+  },
+  "expected": "{\n  \"list\": [\n    {\n      \"x\": 1\n    },\n    [],\n    {}\n  ],\n  \"inner\": {\n    \"deep\": {\n      \"deeper\": [\n        1,\n        [\n          2\n        ]\n      ]\n    }\n  },\n  \"with \\\"quote\\\"\": 1.5,\n  \"with.dot\": 2\n}"
+ },
+ {
+  "name": "nested indent 4",
+  "indent": 4,
+  "value": {
+   "$doc": [
+    [
+     "list",
+     [
+      {
+       "$doc": [
+        [
+         "x",
+         {
+          "$int": "1"
+         }
+        ]
+       ]
+      },
+      [],
+      {
+       "$doc": []
+      }
+     ]
+    ],
+    [
+     "inner",
+     {
+      "$doc": [
+       [
+        "deep",
+        {
+         "$doc": [
+          [
+           "deeper",
+           [
+            {
+             "$int": "1"
+            },
+            [
+             {
+              "$int": "2"
+             }
+            ]
+           ]
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     "with \"quote\"",
+     {
+      "$double": "1.5"
+     }
+    ],
+    [
+     "with.dot",
+     {
+      "$int": "2"
+     }
+    ]
+   ]
+  },
+  "expected": "{\n    \"list\": [\n        {\n            \"x\": 1\n        },\n        [],\n        {}\n    ],\n    \"inner\": {\n        \"deep\": {\n            \"deeper\": [\n                1,\n                [\n                    2\n                ]\n            ]\n        }\n    },\n    \"with \\\"quote\\\"\": 1.5,\n    \"with.dot\": 2\n}"
+ },
+ {
+  "name": "nested compact",
+  "indent": 0,
+  "value": {
+   "$doc": [
+    [
+     "list",
+     [
+      {
+       "$doc": [
+        [
+         "x",
+         {
+          "$int": "1"
+         }
+        ]
+       ]
+      },
+      [],
+      {
+       "$doc": []
+      }
+     ]
+    ],
+    [
+     "inner",
+     {
+      "$doc": [
+       [
+        "deep",
+        {
+         "$doc": [
+          [
+           "deeper",
+           [
+            {
+             "$int": "1"
+            },
+            [
+             {
+              "$int": "2"
+             }
+            ]
+           ]
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     "with \"quote\"",
+     {
+      "$double": "1.5"
+     }
+    ],
+    [
+     "with.dot",
+     {
+      "$int": "2"
+     }
+    ]
+   ]
+  },
+  "expected": "{\"list\": [{\"x\": 1},[],{}],\"inner\": {\"deep\": {\"deeper\": [1,[2]]}},\"with \\\"quote\\\"\": 1.5,\"with.dot\": 2}"
+ },
+ {
+  "name": "nested indent 1",
+  "indent": 1,
+  "value": {
+   "$doc": [
+    [
+     "list",
+     [
+      {
+       "$doc": [
+        [
+         "x",
+         {
+          "$int": "1"
+         }
+        ]
+       ]
+      },
+      [],
+      {
+       "$doc": []
+      }
+     ]
+    ],
+    [
+     "inner",
+     {
+      "$doc": [
+       [
+        "deep",
+        {
+         "$doc": [
+          [
+           "deeper",
+           [
+            {
+             "$int": "1"
+            },
+            [
+             {
+              "$int": "2"
+             }
+            ]
+           ]
+          ]
+         ]
+        }
+       ]
+      ]
+     }
+    ],
+    [
+     "with \"quote\"",
+     {
+      "$double": "1.5"
+     }
+    ],
+    [
+     "with.dot",
+     {
+      "$int": "2"
+     }
+    ]
+   ]
+  },
+  "expected": "{\n \"list\": [\n  {\n   \"x\": 1\n  },\n  [],\n  {}\n ],\n \"inner\": {\n  \"deep\": {\n   \"deeper\": [\n    1,\n    [\n     2\n    ]\n   ]\n  }\n },\n \"with \\\"quote\\\"\": 1.5,\n \"with.dot\": 2\n}"
+ },
+ {
+  "name": "every type",
+  "indent": 2,
+  "value": {
+   "$doc": [
+    [
+     "dec",
+     {
+      "$decimal": "1"
+     }
+    ],
+    [
+     "ts",
+     {
+      "$timestamp": [
+       1,
+       2
+      ]
+     }
+    ],
+    [
+     "day",
+     {
+      "$calendar": "2026-11-02"
+     }
+    ],
+    [
+     "when",
+     {
+      "$date": "2026-11-02T00:00:00.000Z"
+     }
+    ],
+    [
+     "oid",
+     {
+      "$oid": "000102030405060708090a0b"
+     }
+    ],
+    [
+     "bin",
+     {
+      "$bin": [
+       4,
+       "01"
+      ]
+     }
+    ],
+    [
+     "re",
+     {
+      "$regex": [
+       "a",
+       "i"
+      ]
+     }
+    ],
+    [
+     "min",
+     {
+      "$minkey": 1
+     }
+    ],
+    [
+     "max",
+     {
+      "$maxkey": 1
+     }
+    ],
+    [
+     "undef",
+     {
+      "$undefined": 1
+     }
+    ],
+    [
+     "code",
+     {
+      "$code": "1"
+     }
+    ]
+   ]
+  },
+  "expected": "{\n  \"dec\": NumberDecimal(\"1\"),\n  \"ts\": Timestamp(1, 2),\n  \"day\": Date(\"2026-11-02\"),\n  \"when\": ISODate(\"2026-11-02T00:00:00.000Z\"),\n  \"oid\": ObjectId(\"000102030405060708090a0b\"),\n  \"bin\": BinData(4, \"01\"),\n  \"re\": /a/i,\n  \"min\": MinKey,\n  \"max\": MaxKey,\n  \"undef\": undefined,\n  \"code\": Code(\"1\")\n}"
+ }
+]
